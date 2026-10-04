@@ -1,0 +1,18 @@
+# Modul Core API & Services
+/backend/src/routes/          @RosanKelvino
+/backend/src/services/        @RosanKelvino
+/backend/src/config/          @RosanKelvino
+/backend/src/middleware/      @RosanKelvino
+
+# Modul Queue Worker, Database & Migrations
+/backend/src/worker.js        @obipranata2006
+/backend/src/db/              @obipranata2006
+/backend/src/infra/           @obipranata2006
+
+# Modul Frontend SPA
+/frontend/                    @andriyantoay595-art
+
+# Modul Telemetri & Pengujian Otomatis
+/backend/src/telemetry/       @Xrimm
+/backend/tests/               @Xrimm
+/backend/vitest.config.js     @Xrimm
