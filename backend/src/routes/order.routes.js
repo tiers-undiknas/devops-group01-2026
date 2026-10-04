@@ -19,6 +19,8 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+
+
 /**
  * GET /api/v1/orders
  * List orders with pagination and status filter
@@ -28,6 +30,19 @@ router.get('/', async (req, res, next) => {
     const { page, limit, status } = req.query;
     const result = await orderService.listOrders({ page, limit, status });
     res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/v1/orders/stats
+ * Count orders grouped by status (must be declared before /:id)
+ */
+router.get('/stats', async (req, res, next) => {
+  try {
+    const stats = await orderService.getOrderStats();
+    res.status(200).json({ data: stats });
   } catch (err) {
     next(err);
   }
