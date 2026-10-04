@@ -189,6 +189,25 @@ export async function listOrders({ page = 1, limit = 10, status } = {}) {
 }
 
 /**
+ * Count orders grouped by status
+ */
+export async function getOrderStats() {
+  const res = await database.query(
+    'SELECT status, COUNT(*) AS count FROM orders GROUP BY status;'
+  );
+
+  const byStatus = {};
+  let total = 0;
+  for (const row of res.rows) {
+    const count = parseInt(row.count, 10);
+    byStatus[row.status] = count;
+    total += count;
+  }
+
+  return { total, byStatus };
+}
+
+/**
  * Update order status and log event
  */
 export async function updateOrderStatus(id, status, failureReason = null, payload = {}) {
@@ -219,6 +238,7 @@ export default {
   createOrder,
   getOrderById,
   listOrders,
+  getOrderStats,
   updateOrderStatus,
   TAX_RATE
 };
