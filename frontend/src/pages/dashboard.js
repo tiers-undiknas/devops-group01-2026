@@ -111,14 +111,17 @@ export async function renderDashboard(container) {
 async function loadDashboardData() {
   // 1. Fetch Orders List to compute stats
   try {
-    const ordersRes = await api.listOrders({ limit: 100 });
+    const ordersRes = await api.listOrders({ limit: 5 });
     const orders = ordersRes.data || [];
 
-    const total = ordersRes.pagination?.total || orders.length;
-    const pending = orders.filter((o) => o.status === 'pending' || o.status === 'processing').length;
-    const confirmed = orders.filter((o) => o.status === 'confirmed').length;
-    const failed = orders.filter((o) => o.status === 'failed').length;
-
+    const [total, pendingCount, processingCount, confirmed, failed] = await Promise.all([
+      countOrders(),
+      countOrders('pending'),
+      countOrders('processing'),
+      countOrders('confirmed'),
+      countOrders('failed')
+    ]);
+    const pending = pendingCount + processingCount;
     const setVal = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.textContent = val;
@@ -220,6 +223,13 @@ async function loadDashboardData() {
       container.innerHTML = `<p style="color: var(--accent-danger);">Liveness check unreachable (${err.message})</p>`;
     }
   }
+}
+
+async function countOrders(status) {
+  const params = { limit: 1 };
+  if (status) params.status = status;
+  const res = await api.listOrders(params);
+  return res.pagination?.total ?? 0;
 }
 
 function escapeHtml(text) {
