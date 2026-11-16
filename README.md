@@ -313,3 +313,40 @@ Router `/api/v1/diagnostics` dirancang khusus untuk menguji alert rule Prometheu
 | `POST` | `/api/v1/diagnostics/cpu-stress`  | Pemicu lonjakan CPU                                      |
 | `POST` | `/api/v1/diagnostics/memory-leak` | Pemicu kebocoran memori heap V8                          |
 | `POST` | `/api/v1/diagnostics/crash`       | Pemicu crash proses seketika                             |
+
+## 9. Menjalankan dengan Docker Compose
+
+Prasyarat: Docker Desktop aktif.
+
+```bash
+cd deployments
+cp .env.example .env
+docker compose up -d --build
+docker compose ps
+```
+
+| Layanan | Alamat |
+|---|---|
+| Frontend | http://localhost:8080 |
+| API | http://localhost:3000/healthz/ready |
+
+Migrasi database (sudah otomatis saat `api` start, perintah ini idempoten):
+
+```bash
+docker compose exec api npm run db:migrate
+```
+
+Melihat pemrosesan worker:
+
+```bash
+docker compose logs -f worker
+```
+
+Automated test (Vitest) di dalam kontainer, dari root repo:
+
+```bash
+docker build --target test -t ope-backend-test ./backend
+docker run --rm ope-backend-test
+```
+
+Reset total termasuk data: `docker compose down -v`.
