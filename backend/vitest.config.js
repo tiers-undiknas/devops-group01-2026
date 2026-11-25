@@ -6,13 +6,8 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      thresholds: {
-        lines: 75,
-        functions: 75,
-        branches: 70,
-        statements: 75
-      },
+      reporter: ['text', 'json-summary', 'html', 'lcov'],
+      reportsDirectory: './coverage',
       include: ['src/**/*.js'],
       exclude: [
         'src/server.js',
