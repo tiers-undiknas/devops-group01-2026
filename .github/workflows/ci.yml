@@ -33,6 +33,38 @@ jobs:
       - name: Execute Vitest Unit & Integration Tests with Coverage
         run: npx vitest run --coverage
 
+      - name: Enforce Code Coverage Quality Gate (Threshold >= 70%)
+        id: coverage-gate
+        run: |
+          node -e "
+          const fs = require('fs');
+          const summary = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
+          const pct = summary.total.statements.pct;
+          console.log('========================================================');
+          console.log('Statement Code Coverage Aktual : ' + pct + '%');
+          console.log('Ambang Batas Minimal (Quality Gate): 70.0%');
+          console.log('========================================================');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'coverage_pct=' + pct + '\n');
+          if (pct < 70.0) {
+            console.error('[QUALITY GATE FAILED] Coverage (' + pct + '%) di bawah ambang batas minimal 70.0%!');
+            process.exit(1);
+          }
+          console.log('[QUALITY GATE PASSED] Cakupan kode memenuhi standar minimal (>= 70.0%).');
+          "
+
+      - name: Update Dynamic Coverage Badge on Main Branch
+        if: github.ref == 'refs/heads/main' && success()
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 66fc35fb5d26329d24b51abf571e005d
+          filename: coverage.json
+          label: Code Coverage
+          message: ${{ steps.coverage-gate.outputs.coverage_pct }}%
+          minColorRange: 70
+          maxColorRange: 90
+          valColorRange: ${{ steps.coverage-gate.outputs.coverage_pct }}
+
   frontend-ci:
     name: Frontend Test & Vite Production Build
     runs-on: ubuntu-latest
@@ -58,6 +90,20 @@ jobs:
 
       - name: Execute Vitest API Tests with Coverage
         run: npx vitest run --coverage
+
+      - name: Enforce Frontend Coverage Quality Gate (Threshold >= 70%)
+        run: |
+          node -e "
+          const fs = require('fs');
+          const summary = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
+          const pct = summary.total.statements.pct;
+          console.log('Frontend Statement Coverage: ' + pct + '%');
+          if (pct < 70.0) {
+            console.error('[QUALITY GATE FAILED] Frontend coverage (' + pct + '%) di bawah 70.0%!');
+            process.exit(1);
+          }
+          console.log('[QUALITY GATE PASSED] Frontend coverage memenuhi standar.');
+          "
 
       - name: Verify Vite Production Build
         run: npm run build
