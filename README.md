@@ -1,8 +1,10 @@
 # Order Processing Engine (DevOps Seed Project)
 
+
+[![CI Pipeline Status](https://github.com/tiers-undiknas/devops-group01-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/tiers-undiknas/devops-group01-2026/actions/workflows/ci.yml)
+[![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USER_PEMBUAT_GIST/GIST_ID/raw/coverage.json)](#10-laporan-praktikum-lab-3--lab-4-ci-pipeline)
 [![Node.js](https://img.shields.io/badge/Node.js-v24_LTS-green.svg)](https://nodejs.org/)
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Tier_%26_Multi--Process-blue.svg)](#architecture)
-[![Coverage](https://img.shields.io/badge/Coverage-≥75%25-brightgreen.svg)](#testing--code-coverage)
 [![Observability](https://img.shields.io/badge/Observability-Prometheus_%2B_Pino-orange.svg)](#observability--metrics)
 
 **Order Processing Engine** adalah aplikasi acuan (_Seed Project_) berstandar _production-grade_ untuk praktikum mata kuliah DevOps (Semester 5). Aplikasi ini dirancang sebagai target nyata untuk rekayasa infrastruktur, kontainerisasi, automasi CI/CD, DevSecOps, Infrastructure as Code (IaC), dan Observabilitas modern.
@@ -348,5 +350,56 @@ Automated test (Vitest) di dalam kontainer, dari root repo:
 docker build --target test -t ope-backend-test ./backend
 docker run --rm ope-backend-test
 ```
+---
+
+## 10. Laporan Praktikum Lab 3 & Lab 4 (CI Pipeline)
+
+### Tahap 1: ESLint & Vitest Lokal (SC-01)
+
+![SC-01](docs/screenshots/sc01-tahap1-local-vitest-coverage.png)
+
+- `tests/unit/` menguji fungsi/modul secara terisolasi (config, service, middleware) dengan mock database/Redis/queue.
+- `tests/integration/` menguji endpoint API (health, diagnostics, orders) lewat HTTP menggunakan Supertest, sehingga alur route, middleware, dan service diuji bersama.
+
+### Tahap 2: Pipeline CI Paralel (SC-02)
+
+![SC-02](docs/screenshots/sc02-tahap2-lab3-ci-passed.png)
+
+Cara kerja cache: `actions/setup-node` dengan `cache: 'npm'` memakai hash `package-lock.json` sebagai kunci cache. Jika lock file tidak berubah, paket dipulihkan dari cache dan tidak diunduh ulang dari registry, sehingga `npm ci` lebih cepat.
+
+### Tahap 3: Quality Gate & Badge (SC-03)
+
+![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.png)
+
+### Tahap 4: Simulasi Kegagalan (SC-04 & SC-05)
+
+**Simulasi A: Failing Test PR**
+
+![SC-04](docs/screenshots/sc04-tahap4-failing-test-pr.png)
+
+**Simulasi B: Coverage < 70%**
+
+![SC-05](docs/screenshots/sc05-tahap4-coverage-gate-blocked.png)
+
+Analisis proteksi ganda: test yang gagal melindungi dari logika yang rusak, sedangkan quality gate coverage melindungi dari kode baru yang tidak teruji walaupun semua test lama lulus. Keduanya dipaksa oleh Branch Protection Rule sehingga PR bermasalah tidak bisa di-merge ke `main`.
+
+### Tahap 5: Troubleshooting Workflow (Analisis)
+
+1. Tanpa `working-directory: ./backend`, perintah berjalan di root repo, padahal `package.json` dan konfigurasi Vitest ada di `backend/`, sehingga dependensi dan config tidak ditemukan. `npm ci` lebih baik daripada `npm install` di CI karena memakai versi eksak dari `package-lock.json`, tidak mengubahnya, dan gagal jika lock file tidak sinkron, sehingga hasilnya deterministik dan identik dengan lokal.
+2. `|| true` membuat exit code test yang gagal diabaikan, sehingga step dianggap sukses dan pipeline tetap hijau walau ada test rusak. Kode cacat bisa masuk ke `main` dan quality gate kehilangan fungsinya.
+3. Trigger hanya `on: push` ke `main` dan tidak ada `pull_request`, sehingga PR dari branch fitur ke `main` tidak memicu workflow. Perbaikannya menambahkan `pull_request: branches: [main]`.
+
+### Latihan Mandiri: Coverage ≥ 82% (SC-06)
+
+![SC-06](docs/screenshots/sc06-tahap5-mandiri-coverage-82.png)
+
+### Matriks Kontribusi
+
+| NIM | Nama Anggota | Peran & Cabang Git | Tautan PR | Reviewer PR |
+|---|---|---|---|---|
+| (isi NIM) | obipranata2006 | CI & Lint (`feat/ci-lint-setup`) | (isi link PR) | Xrimm |
+| (isi NIM) | Xrimm | Backend Vitest (`feat/backend-vitest-ci`) | (isi link PR) | andriyantoay595-art |
+| (isi NIM) | andriyantoay595-art | Quality Gate 70% (`feat/quality-gate-70`) | (isi link PR) | RosanKelvino |
+| (isi NIM) | RosanKelvino | Badge & Failing PR (`feat/badge-and-demo-gate`) | (isi link PR) | obipranata2006 |
 
 Reset total termasuk data: `docker compose down -v`.
