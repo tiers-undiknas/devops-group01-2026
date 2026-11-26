@@ -275,19 +275,15 @@ Cara kerja cache: `actions/setup-node` dengan `cache: 'npm'` memakai hash `packa
 
 ### Tahap 3: Quality Gate & Badge (SC-03)
 
-![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.png)
+![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.jpeg)
 
 Riwayat workflow **CI Quality Pipeline (Lab 3 & 4)** menunjukkan seluruh run hijau, baik pada branch fitur (`feat/ci-lint-setup`, `feat/badge-and-demo-gate`) maupun pada `main` setelah merge PR #17, #18, dan #19. Quality gate coverage 70% serta badge dinamis ditambahkan melalui PR #18.
 
-### Tahap 4: Simulasi Kegagalan (SC-04 & SC-05)
+### Tahap 4: Simulasi Kegagalan (SC-04)
 
-**Simulasi A: Failing Test PR (SC-04)**
+**Simulasi : Coverage < 70% (SC-05)**
 
-> _Dokumentasi belum tersedia._ Screenshot `docs/screenshots/sc04-tahap4-failing-test-pr.png` akan ditambahkan setelah simulasi test gagal dijalankan.
-
-**Simulasi B: Coverage < 70% (SC-05)**
-
-![SC-05](docs/screenshots/sc05-tahap4-coverage-gate-blocked.png)
+![SC-05](docs/screenshots/sc04-tahap4-coverage-gate-blocked.jpeg)
 
 Step **Enforce Code Coverage Quality Gate (Threshold >= 70%)** gagal dengan log `[QUALITY GATE FAILED]`: coverage aktual **62,69%** berada di bawah ambang batas **70,0%**, sehingga proses keluar dengan exit code 1. Step berikutnya (_Update Dynamic Coverage Badge_) otomatis dilewati.
 
