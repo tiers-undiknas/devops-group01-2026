@@ -369,17 +369,13 @@ Cara kerja cache: `actions/setup-node` dengan `cache: 'npm'` memakai hash `packa
 
 ### Tahap 3: Quality Gate & Badge (SC-03)
 
-![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.png)
+![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.jpeg)
 
 ### Tahap 4: Simulasi Kegagalan (SC-04 & SC-05)
 
-**Simulasi A: Failing Test PR**
+**Simulasi : Coverage < 70%**
 
-![SC-04](docs/screenshots/sc04-tahap4-failing-test-pr.png)
-
-**Simulasi B: Coverage < 70%**
-
-![SC-05](docs/screenshots/sc05-tahap4-coverage-gate-blocked.png)
+![SC-05](docs/screenshots/sc04-tahap4-coverage-gate-blocked.jpeg)
 
 Analisis proteksi ganda: test yang gagal melindungi dari logika yang rusak, sedangkan quality gate coverage melindungi dari kode baru yang tidak teruji walaupun semua test lama lulus. Keduanya dipaksa oleh Branch Protection Rule sehingga PR bermasalah tidak bisa di-merge ke `main`.
 
@@ -389,9 +385,6 @@ Analisis proteksi ganda: test yang gagal melindungi dari logika yang rusak, seda
 2. `|| true` membuat exit code test yang gagal diabaikan, sehingga step dianggap sukses dan pipeline tetap hijau walau ada test rusak. Kode cacat bisa masuk ke `main` dan quality gate kehilangan fungsinya.
 3. Trigger hanya `on: push` ke `main` dan tidak ada `pull_request`, sehingga PR dari branch fitur ke `main` tidak memicu workflow. Perbaikannya menambahkan `pull_request: branches: [main]`.
 
-### Latihan Mandiri: Coverage ≥ 82% (SC-06)
-
-![SC-06](docs/screenshots/sc06-tahap5-mandiri-coverage-82.png)
 
 ### Matriks Kontribusi
 
