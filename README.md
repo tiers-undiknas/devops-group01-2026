@@ -1,11 +1,10 @@
 # Order Processing Engine (DevOps Seed Project)
 
-
 [![CI Pipeline Status](https://github.com/tiers-undiknas/devops-group01-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/tiers-undiknas/devops-group01-2026/actions/workflows/ci.yml)
 [![Code Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USER_PEMBUAT_GIST/GIST_ID/raw/coverage.json)](#10-laporan-praktikum-lab-3--lab-4-ci-pipeline)
 [![Node.js](https://img.shields.io/badge/Node.js-v24_LTS-green.svg)](https://nodejs.org/)
-[![Architecture](https://img.shields.io/badge/Architecture-Multi--Tier_%26_Multi--Process-blue.svg)](#architecture)
-[![Observability](https://img.shields.io/badge/Observability-Prometheus_%2B_Pino-orange.svg)](#observability--metrics)
+[![Architecture](https://img.shields.io/badge/Architecture-Multi--Tier_%26_Multi--Process-blue.svg)](#1-arsitektur-sistem)
+[![Observability](https://img.shields.io/badge/Observability-Prometheus_%2B_Pino-orange.svg)](#6-observabilitas-probes--telemetri)
 
 **Order Processing Engine** adalah aplikasi acuan (_Seed Project_) berstandar _production-grade_ untuk praktikum mata kuliah DevOps (Semester 5). Aplikasi ini dirancang sebagai target nyata untuk rekayasa infrastruktur, kontainerisasi, automasi CI/CD, DevSecOps, Infrastructure as Code (IaC), dan Observabilitas modern.
 
@@ -46,25 +45,11 @@ Aplikasi ini menggunakan arsitektur **Multi-Tier & Multi-Process** dengan pemisa
 
 ### Komponen & Multi-Process Model
 
-1. **Frontend Tier (`frontend/`)**:
-   - Single Page Application (SPA) berbasis Vanilla JavaScript dan Vite.
-   - Menyediakan dashboard operasional, formulir transaksi pemesanan, inspeksi _audit trail_ event, serta _Chaos & SRE Console_.
-   - Port default: `5173` (dilengkapi _reverse-proxy_ ke backend).
-
-2. **Backend API Server (`backend/src/server.js`)**:
-   - Proses HTTP berbasis Node.js LTS v24 dan Express.
-   - Menangani validasi payload (Joi), _idempotent database transactions_, structured JSON logging dengan `x-request-id` (`pino` & `pino-http`), serta mengekspor metrik Prometheus.
-   - Port default: `3000`.
-
-3. **Background Worker (`backend/src/worker.js`)**:
-   - Proses terpisah (_standalone background consumer_) berbasis BullMQ.
-   - Mengambil pekerjaan dari Redis, mengeksekusi pemrosesan pembayaran & validasi inventaris, memperbarui status pesanan, dan mencatat _audit trail_ ke PostgreSQL.
-
-4. **PostgreSQL 16+**:
-   - Menyimpan entitas relasional tabel `orders` dan riwayat status tabel `order_events`.
-
-5. **Redis 7+**:
-   - Berfungsi sebagai antrean pesan (_message broker_) persisten untuk BullMQ.
+1. **Frontend Tier (`frontend/`)**: SPA berbasis Vanilla JavaScript dan Vite. Menyediakan dashboard operasional, formulir transaksi pemesanan, inspeksi _audit trail_ event, serta _Chaos & SRE Console_. Port default `5173` (dilengkapi _reverse-proxy_ ke backend).
+2. **Backend API Server (`backend/src/server.js`)**: Proses HTTP berbasis Node.js LTS v24 dan Express. Menangani validasi payload (Joi), _idempotent database transactions_, structured JSON logging dengan `x-request-id` (`pino` & `pino-http`), serta mengekspor metrik Prometheus. Port default `3000`.
+3. **Background Worker (`backend/src/worker.js`)**: Proses terpisah (_standalone background consumer_) berbasis BullMQ. Mengambil pekerjaan dari Redis, memproses pembayaran & validasi inventaris, memperbarui status pesanan, dan mencatat _audit trail_ ke PostgreSQL.
+4. **PostgreSQL 16+**: Menyimpan tabel `orders` dan riwayat status `order_events`.
+5. **Redis 7+**: Antrean pesan (_message broker_) persisten untuk BullMQ.
 
 ---
 
@@ -73,71 +58,35 @@ Aplikasi ini menggunakan arsitektur **Multi-Tier & Multi-Process** dengan pemisa
 ```
 seed-project-devops/
 ├── .env.example                        # Template environment variables
-├── .gitignore                          # Standard git ignore rules
+├── .gitignore
 ├── package.json                        # Root orchestrator scripts
-├── README.md                           # Dokumentasi teknis lengkap
+├── README.md
 │
 ├── backend/                            # Backend Service (API + Worker)
-│   ├── package.json                    # Backend dependencies & scripts
-│   ├── vitest.config.js                # Konfigurasi pengujian & target coverage (≥75%)
+│   ├── package.json
+│   ├── vitest.config.js                # Konfigurasi pengujian & target coverage
 │   ├── src/
 │   │   ├── app.js                      # Express App factory
 │   │   ├── server.js                   # Entry point HTTP API Server
 │   │   ├── worker.js                   # Entry point BullMQ Background Worker
-│   │   ├── config/                     # Konfigurasi berbasis 12-Factor App
-│   │   │   └── index.js
-│   │   ├── db/                         # PostgreSQL Migrations & Runner
-│   │   │   ├── migrate.js
-│   │   │   └── migrations/
-│   │   │       ├── 001_create_orders_table.sql
-│   │   │       └── 002_create_order_events_table.sql
-│   │   ├── infra/                      # Driver & Connection Pools
-│   │   │   ├── database.js             # pg.Pool & health probe
-│   │   │   ├── redis.js                # ioredis client & health probe
-│   │   │   ├── queue.js                # BullMQ queue & worker factory
-│   │   │   └── logger.js               # Pino structured JSON logger
-│   │   ├── middleware/                 # Middleware Express
-│   │   │   ├── request-id.js           # X-Request-ID & pino-http tracing
-│   │   │   ├── metrics.middleware.js   # HTTP request duration histogram
-│   │   │   └── error-handler.js        # Centralized structured error handler
-│   │   ├── routes/                     # Router API
-│   │   │   ├── health.routes.js        # /healthz/live & /healthz/ready
-│   │   │   ├── diagnostics.routes.js   # /api/v1/diagnostics (Chaos)
-│   │   │   └── order.routes.js         # /api/v1/orders
-│   │   ├── services/                   # Lapisan Logika Bisnis
-│   │   │   ├── order.service.js        # Validasi, kalkulasi tax 11%, CRUD DB
-│   │   │   └── order-processor.service.js # Pemrosesan background job & state transitions
-│   │   └── telemetry/                  # Instrumentasi Prometheus
-│   │       └── metrics.js              # Custom Histograms, Counters, & Gauges
-│   └── tests/                          # Test Suites (≥75% coverage)
-│       ├── helpers/
-│       │   └── mocks.js
+│   │   ├── config/index.js             # Konfigurasi 12-Factor App
+│   │   ├── db/                         # PostgreSQL migrations & runner
+│   │   ├── infra/                      # database, redis, queue, logger
+│   │   ├── middleware/                 # request-id, metrics, error-handler
+│   │   ├── routes/                     # health, diagnostics, order
+│   │   ├── services/                   # order.service, order-processor.service
+│   │   └── telemetry/metrics.js        # Prometheus histograms/counters/gauges
+│   └── tests/
+│       ├── helpers/mocks.js
 │       ├── unit/
-│       │   ├── config.test.js
-│       │   ├── order.service.test.js
-│       │   └── order-processor.service.test.js
 │       └── integration/
-│           ├── health.api.test.js
-│           ├── diagnostics.api.test.js
-│           └── orders.api.test.js
 │
 └── frontend/                           # Frontend Service (Vite SPA)
-    ├── package.json                    # Frontend dependencies & scripts
-    ├── vite.config.js                  # Konfigurasi Vite & Dev API Proxy
-    ├── index.html                      # Single page entry point
-    ├── src/
-    │   ├── main.js                     # Client-side routing
-    │   ├── style.css                   # Dark theme design system
-    │   ├── api.js                      # REST API client
-    │   ├── components/                 # UI components
-    │   │   ├── navbar.js
-    │   │   └── toast.js
-    │   └── pages/                      # Page views
-    │       ├── dashboard.js            # Telemetry & status dashboard
-    │       ├── orders.js               # Order creation & audit timeline
-    │       └── diagnostics.js          # SRE Chaos engineering panel
-    └── tests/
-        └── api.test.js                 # Frontend API client tests
+    ├── package.json
+    ├── vite.config.js
+    ├── index.html
+    ├── src/                            # main.js, api.js, components/, pages/
+    └── tests/api.test.js
 ```
 
 ---
@@ -146,8 +95,8 @@ seed-project-devops/
 
 - **Node.js**: LTS v24.x atau lebih baru (`node --version`)
 - **NPM**: v10.x atau lebih baru (`npm --version`)
-- **PostgreSQL**: v16+ (lokal atau remote instance)
-- **Redis**: v7+ (lokal atau remote instance)
+- **PostgreSQL**: v16+ (lokal atau remote)
+- **Redis**: v7+ (lokal atau remote)
 
 ---
 
@@ -155,30 +104,22 @@ seed-project-devops/
 
 ### Langkah 1: Instalasi Dependensi
 
-Jalankan perintah ini di direktori root untuk menginstal dependensi backend dan frontend:
-
 ```bash
 npm run install:all
 ```
 
 ### Langkah 2: Konfigurasi Variabel Lingkungan
 
-Salin template `.env.example` ke `.env`:
-
 ```bash
 cp .env.example .env
 ```
-
-Sesuaikan konfigurasi koneksi PostgreSQL dan Redis jika diperlukan:
 
 ```env
 DATABASE_URL=postgresql://devops_user:devops_pass@localhost:5432/order_processing
 REDIS_URL=redis://localhost:6379
 ```
 
-### Langkah 3: Menjalankan Migrasi Database
-
-Jalankan migrasi skema tabel PostgreSQL (`orders`, `order_events`, `schema_migrations`):
+### Langkah 3: Migrasi Database
 
 ```bash
 cd backend
@@ -186,66 +127,39 @@ npm run db:migrate
 cd ..
 ```
 
-### Langkah 4: Menjalankan Komponen Aplikasi (Multi-Process)
+### Langkah 4: Menjalankan Komponen (Multi-Process)
 
-Buka 3 tab terminal berbeda:
-
-**Terminal 1: Menjalankan Backend HTTP API Server (Port 3000)**
+Buka 3 terminal:
 
 ```bash
-npm run dev:backend
+npm run dev:backend    # Terminal 1: API Server (Port 3000)
+npm run dev:worker     # Terminal 2: Background Worker
+npm run dev:frontend   # Terminal 3: Frontend (Port 5173)
 ```
 
-**Terminal 2: Menjalankan Background Worker (BullMQ Consumer)**
-
-```bash
-npm run dev:worker
-```
-
-**Terminal 3: Menjalankan Frontend Dev Server (Port 5173)**
-
-```bash
-npm run dev:frontend
-```
-
-Buka peramban di `http://localhost:5173` untuk mengakses **Order Processing Engine Dashboard**.
+Buka `http://localhost:5173` untuk mengakses dashboard.
 
 ---
 
 ## 5. Pengujian Otomatis & Code Coverage
 
-Proyek ini dilengkapi pengujian unit dan integrasi dengan **Vitest** dan **Supertest** menggunakan driver _mocks_ terisolasi untuk PostgreSQL dan Redis.
-
-### Menjalankan Seluruh Pengujian
+Pengujian unit dan integrasi memakai **Vitest** dan **Supertest** dengan _mock_ terisolasi untuk PostgreSQL dan Redis.
 
 ```bash
-npm test
+npm test                  # seluruh pengujian
+npm run test:coverage     # laporan coverage (text, JSON, HTML di backend/coverage/index.html)
 ```
-
-### Memeriksa Laporan Code Coverage (Target: ≥ 75%)
-
-```bash
-npm run test:coverage
-```
-
-_Laporan coverage lengkap dalam format text, JSON, dan HTML akan dihasilkan di direktori `backend/coverage/index.html`._
 
 ---
 
 ## 6. Observabilitas, Probes & Telemetri
 
-### Production Health Probes
+| Endpoint         | Method | Fungsi                                                          | Expected Status                                      |
+| ---------------- | ------ | --------------------------------------------------------------- | ---------------------------------------------------- |
+| `/healthz/live`  | `GET`  | Event loop responsif, memori heap V8 & uptime                   | `200 OK`                                             |
+| `/healthz/ready` | `GET`  | Ping ke pool PostgreSQL dan koneksi Redis                       | `200 OK` (keduanya UP) / `503` (salah satu DOWN)     |
 
-Aplikasi mengimplementasikan endpoint liveness & readiness standar Kubernetes:
-
-| Endpoint         | Method | Fungsi & Evaluasi                                                                         | Expected Status                                                                 |
-| ---------------- | ------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `/healthz/live`  | `GET`  | Memastikan event loop Node.js responsif dan melaporkan penggunaan memori heap V8 & uptime | `200 OK`                                                                        |
-| `/healthz/ready` | `GET`  | Memeriksa ketersediaan aktif (_ping_) ke pool PostgreSQL dan koneksi Redis                | `200 OK` (jika keduanya UP)<br>`503 Service Unavailable` (jika salah satu DOWN) |
-
-### Structured JSON Logging (Pino)
-
-Setiap permintaan HTTP menyertakan header `x-request-id` (diteruskan dari klien atau di-generate otomatis via UUIDv4). Baris log dicetak dalam format JSON standar cloud-native untuk diagregasi dengan Grafana Loki, Fluentbit, atau ELK Stack:
+**Structured JSON Logging (Pino)**: setiap request membawa `x-request-id` (dari klien atau UUIDv4 otomatis).
 
 ```json
 {
@@ -258,46 +172,29 @@ Setiap permintaan HTTP menyertakan header `x-request-id` (diteruskan dari klien 
 }
 ```
 
-### Prometheus Metrics (`GET /metrics`)
+**Prometheus Metrics (`GET /metrics`)**:
 
-Tersedia metrik bawaan Node.js (V8 heap, GC, event loop lag, CPU) dan metrik bisnis kustom:
-
-- `ope_http_request_duration_seconds`: Histogram durasi HTTP request berdasarkan method, route, dan status_code.
-- `ope_orders_created_total`: Counter total order yang berhasil dibuat berdasarkan status.
-- `ope_order_processing_duration_seconds`: Histogram durasi pemrosesan order pada background worker.
-- `ope_queue_active_jobs`: Gauge jumlah pekerjaan aktif di antrean Redis.
+- `ope_http_request_duration_seconds`: histogram durasi HTTP request (method, route, status_code).
+- `ope_orders_created_total`: counter order berhasil dibuat per status.
+- `ope_order_processing_duration_seconds`: histogram durasi pemrosesan order di worker.
+- `ope_queue_active_jobs`: gauge job aktif di antrean Redis.
 
 ---
 
 ## 7. Chaos & Incident Injection Endpoints (SRE Lab)
 
-Router `/api/v1/diagnostics` dirancang khusus untuk menguji alert rule Prometheus, dashboard Grafana, dan mekanisme pemulihan otomatis (Docker restart / Kubernetes liveness failure):
+```bash
+# CPU stress (loop SHA-256)
+curl -X POST http://localhost:3000/api/v1/diagnostics/cpu-stress \
+  -H "Content-Type: application/json" -d '{"durationMs": 3000}'
 
-1. **CPU Stress Test**:
+# Memory leak simulation
+curl -X POST http://localhost:3000/api/v1/diagnostics/memory-leak \
+  -H "Content-Type: application/json" -d '{"sizeMb": 50}'
 
-   ```bash
-   curl -X POST http://localhost:3000/api/v1/diagnostics/cpu-stress \
-     -H "Content-Type: application/json" \
-     -d '{"durationMs": 3000}'
-   ```
-
-   _Mengunci CPU dengan loop kalkulasi SHA-256 intensif untuk menguji alert lonjakan CPU._
-
-2. **Memory Leak Simulation**:
-
-   ```bash
-   curl -X POST http://localhost:3000/api/v1/diagnostics/memory-leak \
-     -H "Content-Type: application/json" \
-     -d '{"sizeMb": 50}'
-   ```
-
-   _Mengalokasikan array string global tanpa henti untuk memicu lonjakan heap V8 dan menguji OOMKill._
-
-3. **Process Crash**:
-   ```bash
-   curl -X POST http://localhost:3000/api/v1/diagnostics/crash
-   ```
-   _Mengeksekusi `process.exit(1)` seketika untuk memvalidasi Docker restart policy (`--restart unless-stopped`) atau Kubernetes crash-loop-backoff._
+# Process crash (process.exit(1))
+curl -X POST http://localhost:3000/api/v1/diagnostics/crash
+```
 
 ---
 
@@ -306,15 +203,17 @@ Router `/api/v1/diagnostics` dirancang khusus untuk menguji alert rule Prometheu
 | Method | Endpoint                          | Keterangan                                               |
 | ------ | --------------------------------- | -------------------------------------------------------- |
 | `GET`  | `/healthz/live`                   | Liveness probe Node.js                                   |
-| `GET`  | `/healthz/ready`                  | Readiness probe (PostgreSQL & Redis check)               |
-| `GET`  | `/metrics`                        | Prometheus metrics endpoint                              |
-| `POST` | `/api/v1/orders`                  | Membuat transaksi order baru                             |
-| `GET`  | `/api/v1/orders`                  | Mengambil daftar order dengan pagination & filter status |
-| `GET`  | `/api/v1/orders/:id`              | Mengambil detail order berdasarkan UUID                  |
-| `GET`  | `/api/v1/orders/:id/events`       | Mengambil audit trail / riwayat status order             |
+| `GET`  | `/healthz/ready`                  | Readiness probe (PostgreSQL & Redis)                     |
+| `GET`  | `/metrics`                        | Prometheus metrics                                       |
+| `POST` | `/api/v1/orders`                  | Membuat order baru                                       |
+| `GET`  | `/api/v1/orders`                  | Daftar order dengan pagination & filter status           |
+| `GET`  | `/api/v1/orders/:id`              | Detail order berdasarkan UUID                            |
+| `GET`  | `/api/v1/orders/:id/events`       | Audit trail / riwayat status order                       |
 | `POST` | `/api/v1/diagnostics/cpu-stress`  | Pemicu lonjakan CPU                                      |
-| `POST` | `/api/v1/diagnostics/memory-leak` | Pemicu kebocoran memori heap V8                          |
-| `POST` | `/api/v1/diagnostics/crash`       | Pemicu crash proses seketika                             |
+| `POST` | `/api/v1/diagnostics/memory-leak` | Pemicu kebocoran memori                                  |
+| `POST` | `/api/v1/diagnostics/crash`       | Pemicu crash proses                                      |
+
+---
 
 ## 9. Menjalankan dengan Docker Compose
 
@@ -327,12 +226,12 @@ docker compose up -d --build
 docker compose ps
 ```
 
-| Layanan | Alamat |
-|---|---|
-| Frontend | http://localhost:8080 |
-| API | http://localhost:3000/healthz/ready |
+| Layanan  | Alamat                              |
+| -------- | ----------------------------------- |
+| Frontend | http://localhost:8080               |
+| API      | http://localhost:3000/healthz/ready |
 
-Migrasi database (sudah otomatis saat `api` start, perintah ini idempoten):
+Migrasi database (otomatis saat `api` start, perintah ini idempoten):
 
 ```bash
 docker compose exec api npm run db:migrate
@@ -350,6 +249,9 @@ Automated test (Vitest) di dalam kontainer, dari root repo:
 docker build --target test -t ope-backend-test ./backend
 docker run --rm ope-backend-test
 ```
+
+Reset total termasuk data: `docker compose down -v`.
+
 ---
 
 ## 10. Laporan Praktikum Lab 3 & Lab 4 (CI Pipeline)
@@ -358,12 +260,16 @@ docker run --rm ope-backend-test
 
 ![SC-01](docs/screenshots/sc01-tahap1-local-vitest-coverage.png)
 
-- `tests/unit/` menguji fungsi/modul secara terisolasi (config, service, middleware) dengan mock database/Redis/queue.
-- `tests/integration/` menguji endpoint API (health, diagnostics, orders) lewat HTTP menggunakan Supertest, sehingga alur route, middleware, dan service diuji bersama.
+Hasil `npx eslint src tests` menghasilkan **0 error dan 4 warning** (`no-unused-vars`). Hasil `npx vitest run --coverage`: **10 test file dan 72 test lulus**, dengan coverage keseluruhan **97,11%** (Statements), 86,42% (Branch), 83,33% (Functions), 97,11% (Lines).
+
+- `tests/unit/` menguji fungsi/modul secara terisolasi (config, service, middleware, infra) dengan mock database/Redis/queue.
+- `tests/integration/` menguji endpoint API (health, diagnostics, orders, order-stats) lewat HTTP menggunakan Supertest, sehingga alur route, middleware, dan service diuji bersama.
 
 ### Tahap 2: Pipeline CI Paralel (SC-02)
 
 ![SC-02](docs/screenshots/sc02-tahap2-lab3-ci-passed.png)
+
+Workflow GitHub Actions pada PR #17 (`feat(ci): add parallel backend and frontend github actions pipeline`) menjalankan dua job paralel yang keduanya hijau: **Backend Lint, Vitest, & Coverage Gate** dan **Frontend Test & Vite Production Build**.
 
 Cara kerja cache: `actions/setup-node` dengan `cache: 'npm'` memakai hash `package-lock.json` sebagai kunci cache. Jika lock file tidak berubah, paket dipulihkan dari cache dan tidak diunduh ulang dari registry, sehingga `npm ci` lebih cepat.
 
@@ -371,15 +277,19 @@ Cara kerja cache: `actions/setup-node` dengan `cache: 'npm'` memakai hash `packa
 
 ![SC-03](docs/screenshots/sc03-tahap3-lab4-badge-coverage.png)
 
+Riwayat workflow **CI Quality Pipeline (Lab 3 & 4)** menunjukkan seluruh run hijau, baik pada branch fitur (`feat/ci-lint-setup`, `feat/badge-and-demo-gate`) maupun pada `main` setelah merge PR #17, #18, dan #19. Quality gate coverage 70% serta badge dinamis ditambahkan melalui PR #18.
+
 ### Tahap 4: Simulasi Kegagalan (SC-04 & SC-05)
 
-**Simulasi A: Failing Test PR**
+**Simulasi A: Failing Test PR (SC-04)**
 
-![SC-04](docs/screenshots/sc04-tahap4-failing-test-pr.png)
+> _Dokumentasi belum tersedia._ Screenshot `docs/screenshots/sc04-tahap4-failing-test-pr.png` akan ditambahkan setelah simulasi test gagal dijalankan.
 
-**Simulasi B: Coverage < 70%**
+**Simulasi B: Coverage < 70% (SC-05)**
 
 ![SC-05](docs/screenshots/sc05-tahap4-coverage-gate-blocked.png)
+
+Step **Enforce Code Coverage Quality Gate (Threshold >= 70%)** gagal dengan log `[QUALITY GATE FAILED]`: coverage aktual **62,69%** berada di bawah ambang batas **70,0%**, sehingga proses keluar dengan exit code 1. Step berikutnya (_Update Dynamic Coverage Badge_) otomatis dilewati.
 
 Analisis proteksi ganda: test yang gagal melindungi dari logika yang rusak, sedangkan quality gate coverage melindungi dari kode baru yang tidak teruji walaupun semua test lama lulus. Keduanya dipaksa oleh Branch Protection Rule sehingga PR bermasalah tidak bisa di-merge ke `main`.
 
@@ -391,15 +301,13 @@ Analisis proteksi ganda: test yang gagal melindungi dari logika yang rusak, seda
 
 ### Latihan Mandiri: Coverage ≥ 82% (SC-06)
 
-![SC-06](docs/screenshots/sc06-tahap5-mandiri-coverage-82.png)
+> _Dokumentasi belum tersedia._ Screenshot `docs/screenshots/sc06-tahap5-mandiri-coverage-82.png` akan ditambahkan. Sebagai referensi, coverage backend lokal saat ini sudah mencapai 97,11% (lihat SC-01).
 
 ### Matriks Kontribusi
 
-| NIM | Nama Anggota | Peran & Cabang Git | Tautan PR | Reviewer PR |
-|---|---|---|---|---|
-| (isi NIM) | obipranata2006 | CI & Lint (`feat/ci-lint-setup`) | (isi link PR) | Xrimm |
-| (isi NIM) | Xrimm | Backend Vitest (`feat/backend-vitest-ci`) | (isi link PR) | andriyantoay595-art |
-| (isi NIM) | andriyantoay595-art | Quality Gate 70% (`feat/quality-gate-70`) | (isi link PR) | RosanKelvino |
-| (isi NIM) | RosanKelvino | Badge & Failing PR (`feat/badge-and-demo-gate`) | (isi link PR) | obipranata2006 |
-
-Reset total termasuk data: `docker compose down -v`.
+| NIM       | Nama Anggota        | Peran & Cabang Git                              | Tautan PR     | Reviewer PR         |
+| --------- | ------------------- | ----------------------------------------------- | ------------- | ------------------- |
+| (isi NIM) | obipranata2006      | CI & Lint (`feat/ci-lint-setup`)                | (isi link PR) | Xrimm               |
+| (isi NIM) | Xrimm               | Backend Vitest (`feat/backend-vitest-ci`)       | (isi link PR) | andriyantoay595-art |
+| (isi NIM) | andriyantoay595-art | Quality Gate 70% (`feat/quality-gate-70`)       | (isi link PR) | RosanKelvino        |
+| (isi NIM) | RosanKelvino        | Badge & Failing PR (`feat/badge-and-demo-gate`) | (isi link PR) | obipranata2006      |
